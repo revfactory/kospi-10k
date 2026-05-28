@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KOSPI 10,000 — 도달 가능성 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/variable/pretendardvariable.css" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg-0: #05060d;
+    --bg-1: #0a0d18;
+    --bg-2: #11152a;
+    --accent-gold: #f5b400;
+    --accent-amber: #ffd34d;
+    --accent-red: #ff5757;
+    --accent-green: #34d399;
+    --accent-blue: #60a5fa;
+    --accent-purple: #a78bfa;
+    --text-1: #e8ecf2;
+    --text-2: #9aa3b2;
+    --text-3: #5d6678;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+  body {
+    background:
+      radial-gradient(ellipse 1200px 800px at 10% -20%, rgba(245, 180, 0, 0.10), transparent 60%),
+      radial-gradient(ellipse 1000px 700px at 95% 30%, rgba(96, 165, 250, 0.08), transparent 60%),
+      radial-gradient(ellipse 1100px 700px at 50% 110%, rgba(167, 139, 250, 0.08), transparent 60%),
+      var(--bg-0);
+    min-height: 100vh;
+  }
+
+  /* Canvas background */
+  #particle-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* Animated grid backdrop */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(245, 180, 0, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(96, 165, 250, 0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+    pointer-events: none;
+    animation: gridShift 30s linear infinite;
+  }
+  @keyframes gridShift {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 60px 60px, 60px 60px; }
+  }
+
+  /* Aurora glow */
+  .aurora {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .aurora::before, .aurora::after {
+    content: '';
+    position: absolute;
+    width: 60vw;
+    height: 60vw;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.35;
+    animation: float 20s ease-in-out infinite;
+  }
+  .aurora::before {
+    background: radial-gradient(circle, rgba(245, 180, 0, 0.4), transparent 60%);
+    top: -10vw;
+    left: -10vw;
+  }
+  .aurora::after {
+    background: radial-gradient(circle, rgba(96, 165, 250, 0.4), transparent 60%);
+    bottom: -10vw;
+    right: -10vw;
+    animation-delay: -10s;
+  }
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(5vw, 3vh) scale(1.1); }
+    66% { transform: translate(-3vw, -5vh) scale(0.95); }
+  }
+
+  /* Content stack above bg */
+  main, nav { position: relative; z-index: 10; }
+
+  /* Glass card */
+  .glass {
+    background: rgba(17, 21, 42, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 1.25rem;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .glass:hover {
+    border-color: rgba(245, 180, 0, 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(245, 180, 0, 0.2);
+  }
+
+  /* Section divider */
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(245, 180, 0, 0.4), transparent);
+    margin: 0;
+  }
+
+  /* Headline gradient */
+  .gradient-text {
+    background: linear-gradient(135deg, #f5b400 0%, #ffd34d 30%, #ffe896 60%, #f5b400 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    background-size: 200% 200%;
+    animation: shimmer 5s ease-in-out infinite;
+  }
+  @keyframes shimmer {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* Ticker tape */
+  .ticker {
+    display: flex;
+    overflow: hidden;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: rgba(5, 6, 13, 0.6);
+    backdrop-filter: blur(10px);
+  }
+  .ticker-track {
+    display: flex;
+    gap: 3rem;
+    padding: 0.75rem 0;
+    animation: scroll-left 45s linear infinite;
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding-left: 3rem;
+  }
+  @keyframes scroll-left {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
+  .ticker-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-2);
+    font-size: 0.85rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .ticker-item .up { color: var(--accent-green); }
+  .ticker-item .down { color: var(--accent-red); }
+  .ticker-item .neutral { color: var(--accent-gold); }
+
+  /* Progress bar */
+  .progress-track {
+    position: relative;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 11px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .progress-fill {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, var(--accent-gold), var(--accent-amber));
+    transform-origin: left center;
+    transform: scaleX(0);
+    transition: transform 2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 30px rgba(245, 180, 0, 0.6);
+  }
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    animation: progress-shimmer 2.5s ease-in-out infinite;
+  }
+  @keyframes progress-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  /* Animated number */
+  .num-anim {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Scenario cards */
+  .scenario-card {
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .scenario-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(245, 180, 0, 0.15), transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .scenario-card:hover::before {
+    opacity: 1;
+  }
+  .scenario-card.active {
+    border-color: var(--accent-gold);
+    background: rgba(245, 180, 0, 0.06);
+  }
+  .scenario-card.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-gold), var(--accent-amber));
+  }
+
+  /* Pulse */
+  .pulse {
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Reveal on scroll */
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Slider */
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, rgba(255, 87, 87, 0.4), rgba(245, 180, 0, 0.4), rgba(52, 211, 153, 0.4));
+    border-radius: 3px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    cursor: pointer;
+    box-shadow: 0 0 20px rgba(245, 180, 0, 0.6), 0 0 0 4px rgba(245, 180, 0, 0.2);
+    transition: transform 0.2s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+  }
+
+  /* Timeline */
+  .timeline-track {
+    position: relative;
+  }
+  .timeline-track::before {
+    content: '';
+    position: absolute;
+    top: 24px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-gold), rgba(245, 180, 0, 0.2));
+  }
+  .timeline-dot {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    box-shadow: 0 0 0 4px rgba(245, 180, 0, 0.2), 0 0 20px rgba(245, 180, 0, 0.5);
+    margin: 19px auto;
+    flex-shrink: 0;
+  }
+  .timeline-dot.urgent {
+    background: var(--accent-red);
+    box-shadow: 0 0 0 4px rgba(255, 87, 87, 0.2), 0 0 20px rgba(255, 87, 87, 0.7);
+    animation: dot-pulse 2s ease-in-out infinite;
+  }
+  @keyframes dot-pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(255, 87, 87, 0.2), 0 0 20px rgba(255, 87, 87, 0.7); }
+    50% { box-shadow: 0 0 0 10px rgba(255, 87, 87, 0), 0 0 30px rgba(255, 87, 87, 0.9); }
+  }
+
+  /* Tab buttons */
+  .tab-btn {
+    transition: all 0.3s;
+    position: relative;
+  }
+  .tab-btn.active {
+    color: var(--accent-gold);
+  }
+  .tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-gold);
+    border-radius: 2px;
+  }
+
+  /* Risk grid */
+  .risk-tile {
+    transition: all 0.3s;
+  }
+  .risk-tile:hover {
+    background: rgba(255, 87, 87, 0.08);
+    border-color: rgba(255, 87, 87, 0.4);
+  }
+
+  /* Nav */
+  .nav-link {
+    position: relative;
+    transition: color 0.2s;
+  }
+  .nav-link:hover { color: var(--accent-gold); }
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--accent-gold);
+    transition: width 0.3s;
+  }
+  .nav-link:hover::after { width: 100%; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-0); }
+  ::-webkit-scrollbar-thumb { background: rgba(245, 180, 0, 0.3); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(245, 180, 0, 0.6); }
+
+  /* Probability pill */
+  .prob-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+
+  /* Detail content fade */
+  .detail-content {
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    transition: opacity 0.4s;
+  }
+  .detail-content.active {
+    opacity: 1;
+    pointer-events: auto;
+    position: relative;
+  }
+
+  /* Footer */
+  footer {
+    background: rgba(5, 6, 13, 0.85);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  @media (max-width: 768px) {
+    .timeline-track { overflow-x: auto; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Animated backgrounds -->
+<canvas id="particle-canvas"></canvas>
+<div class="grid-bg"></div>
+<div class="aurora"></div>
+
+<!-- Top nav -->
+<nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-black/30 border-b border-white/5">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center font-black text-black text-sm">10K</div>
+      <span class="font-bold tracking-tight text-lg">KOSPI 10,000 Outlook</span>
+    </div>
+    <div class="hidden md:flex items-center gap-8 text-sm text-gray-300">
+      <a href="#hero" class="nav-link">개요</a>
+      <a href="#scenarios" class="nav-link">시나리오</a>
+      <a href="#probability" class="nav-link">확률</a>
+      <a href="#sensitivity" class="nav-link">민감도</a>
+      <a href="#timeline" class="nav-link">캘린더</a>
+      <a href="#experts" class="nav-link">전문가</a>
+    </div>
+    <div class="text-xs text-gray-500 hidden lg:block">분석일 2026-05-27</div>
+  </div>
+</nav>
+
+<!-- Ticker -->
+<div class="ticker mt-[68px]">
+  <div class="ticker-track" id="ticker-1"></div>
+  <div class="ticker-track" id="ticker-2"></div>
+</div>
+
+<main>
+  <!-- HERO -->
+  <section id="hero" class="min-h-[88vh] flex items-center px-6 py-20">
+    <div class="max-w-7xl mx-auto w-full">
+      <div class="grid md:grid-cols-2 gap-12 items-center">
+        <div class="reveal">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-300 mb-6">
+            <span class="w-2 h-2 rounded-full bg-yellow-400 pulse"></span>
+            5인 전문가 팀 다층 분석
+          </div>
+          <h1 class="text-5xl md:text-7xl font-black tracking-tight leading-none mb-6">
+            코스피<br/>
+            <span class="gradient-text">10,000</span><br/>
+            <span class="text-3xl md:text-5xl text-gray-400 font-bold">언제, 어떻게 갈까?</span>
+          </h1>
+          <p class="text-gray-400 text-lg leading-relaxed mb-8 max-w-xl">
+            <strong class="text-white">갈 수 있다.</strong> 컨센서스 EPS와 10년 평균 PER만 곱해도 산술적으로 10,061이 나오는 영역에 이미 진입했다. 가장 가능성 높은 경로는 <strong class="text-yellow-300">2027년 내 도달 + 2028 상반기 안착</strong>.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <a href="#scenarios" class="px-5 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold text-sm hover:scale-105 transition-transform">시나리오 4종 보기 ↓</a>
+            <a href="#sensitivity" class="px-5 py-3 rounded-xl border border-white/15 text-sm font-medium hover:bg-white/5 transition">민감도 시뮬레이션</a>
+          </div>
+        </div>
+
+        <!-- Progress visualizer -->
+        <div class="glass p-8 reveal">
+          <div class="flex items-baseline justify-between mb-2">
+            <span class="text-xs text-gray-500 uppercase tracking-widest">현재 KOSPI</span>
+            <span class="text-xs text-green-400">YoY +205.15%</span>
+          </div>
+          <div class="flex items-baseline gap-3 mb-1">
+            <div class="text-5xl md:text-6xl font-black num-anim" id="kospi-current">8,048</div>
+            <div class="text-sm text-green-400 font-semibold">+2.55%</div>
+          </div>
+          <div class="text-xs text-gray-500 mb-6">2026-05-26 종가 · 출처: KRX</div>
+
+          <div class="space-y-2 mb-6">
+            <div class="flex justify-between text-xs text-gray-400">
+              <span>10,000까지</span>
+              <span class="text-yellow-300 font-mono"><span id="distance">+24.3</span>%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="hero-progress"></div>
+            </div>
+            <div class="flex justify-between text-[10px] text-gray-600 font-mono">
+              <span>0</span>
+              <span>8,048</span>
+              <span>10,000</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-3 pt-4 border-t border-white/5">
+            <div>
+              <div class="text-2xl font-bold text-yellow-300 num-anim" id="touch-2027">55<span class="text-base">%</span></div>
+              <div class="text-[11px] text-gray-500 leading-tight mt-1">2027년 내<br/>터치 확률</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-blue-300 num-anim">40<span class="text-base">%</span></div>
+              <div class="text-[11px] text-gray-500 leading-tight mt-1">2028년 내<br/>안착 확률</div>
+            </div>
+            <div>
+              <div class="text-2xl font-bold text-red-300 num-anim">5<span class="text-base">%</span></div>
+              <div class="text-[11px] text-gray-500 leading-tight mt-1">영구<br/>미달 확률</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TL;DR cards -->
+  <section class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">TL;DR — 핵심 3문장</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-12">결론부터 본다면</h2>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-6">
+        <div class="glass p-7 reveal">
+          <div class="text-5xl font-black text-yellow-300 mb-4">01</div>
+          <h3 class="text-xl font-bold mb-3">갈 수 있다</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            컨센서스 <strong class="text-white">2026E 순이익 692조원</strong> × 10년 평균 PER 9.5배 = <strong class="text-yellow-300">10,061</strong>. 수학적으로 이미 진입한 영역.
+          </p>
+        </div>
+        <div class="glass p-7 reveal">
+          <div class="text-5xl font-black text-blue-300 mb-4">02</div>
+          <h3 class="text-xl font-bold mb-3">가장 가능성 높은 경로</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            <strong class="text-white">2027년 내 도달</strong> + <strong class="text-white">2028 상반기 안착</strong>. Base case 확률 약 40%. 2026 내 단기 돌파(낙관, 20%)도 살아있는 시나리오.
+          </p>
+        </div>
+        <div class="glass p-7 reveal">
+          <div class="text-5xl font-black text-red-300 mb-4">03</div>
+          <h3 class="text-xl font-bold mb-3">"도달" ≠ "안착"</h3>
+          <p class="text-gray-400 text-sm leading-relaxed">
+            1989·2007·2021 — 세 차례 마일스톤 도달 직후 모두 <strong class="text-red-300">-20~50% 조정</strong>. 안착에는 EPS 정상화를 밸류업 입법이 멀티플 재평가로 상쇄해야.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- SCENARIOS -->
+  <section id="scenarios" class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">SECTION 01</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-3">시나리오 4종</h2>
+        <p class="text-gray-400 mb-10 max-w-2xl">점추정 대신 조건부 시나리오. 클릭해서 각 경로의 도달 조건·무효화 트리거·역사적 선례를 확인하세요.</p>
+      </div>
+
+      <div class="grid md:grid-cols-4 gap-4 mb-10">
+        <div class="glass scenario-card p-6 active reveal" data-scenario="A">
+          <div class="flex items-baseline justify-between mb-3">
+            <span class="text-xs font-semibold text-yellow-400">A · 낙관</span>
+            <span class="prob-pill bg-yellow-500/15 text-yellow-300">20%</span>
+          </div>
+          <div class="text-3xl font-black mb-2">2026 4Q<br/>~ 2027 1Q</div>
+          <div class="text-xs text-gray-500 mb-4">첫 10,000 터치</div>
+          <p class="text-sm text-gray-400 leading-relaxed">단기 돌파 + 빠른 안착. 정책·이익·매크로 동시 우호.</p>
+        </div>
+        <div class="glass scenario-card p-6 reveal" data-scenario="B">
+          <div class="flex items-baseline justify-between mb-3">
+            <span class="text-xs font-semibold text-blue-300">B · 중립 (Base)</span>
+            <span class="prob-pill bg-blue-500/15 text-blue-300">40%</span>
+          </div>
+          <div class="text-3xl font-black mb-2">2027<br/>~ 2028</div>
+          <div class="text-xs text-gray-500 mb-4">첫 10,000 터치</div>
+          <p class="text-sm text-gray-400 leading-relaxed">점진적 EPS·멀티플 동반 상승. 가장 건강한 경로.</p>
+        </div>
+        <div class="glass scenario-card p-6 reveal" data-scenario="C">
+          <div class="flex items-baseline justify-between mb-3">
+            <span class="text-xs font-semibold text-purple-300">C · 보수</span>
+            <span class="prob-pill bg-purple-500/15 text-purple-300">25%</span>
+          </div>
+          <div class="text-3xl font-black mb-2">2029<br/>~ 2030</div>
+          <div class="text-xs text-gray-500 mb-4">조정 후 재돌파</div>
+          <p class="text-sm text-gray-400 leading-relaxed">메모리 정점 후 조정 → 박스권 → 재도전.</p>
+        </div>
+        <div class="glass scenario-card p-6 reveal" data-scenario="D">
+          <div class="flex items-baseline justify-between mb-3">
+            <span class="text-xs font-semibold text-red-300">D · 지연/실패</span>
+            <span class="prob-pill bg-red-500/15 text-red-300">15%</span>
+          </div>
+          <div class="text-3xl font-black mb-2">2032+<br/>또는 미달</div>
+          <div class="text-xs text-gray-500 mb-4">잃어버린 10년형</div>
+          <p class="text-sm text-gray-400 leading-relaxed">정책·산업 동시 실패. 박스권 5~10년 고착.</p>
+        </div>
+      </div>
+
+      <!-- Scenario detail -->
+      <div class="glass p-8 md:p-10 relative min-h-[480px] reveal">
+        <!-- A -->
+        <div class="detail-content active" data-scenario-detail="A">
+          <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl font-black text-yellow-300">A</span>
+                <span class="text-2xl font-bold">낙관 시나리오</span>
+                <span class="prob-pill bg-yellow-500/15 text-yellow-300">확률 20%</span>
+              </div>
+              <p class="text-gray-400">2026 하반기 단기 돌파 → 짧은 조정 → 2027 하반기~2028 상반기 안착</p>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">도달 산식</div>
+              <div class="font-mono text-yellow-300">EPS 1,200 × PER 9.5배 ≒ 11,400</div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-yellow-400 mb-2 font-semibold">거시 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 한은 5/28 동결, 하반기 인상 보류</li>
+                <li>· 원/달러 1,300대 진입</li>
+                <li>· 미 연준 9월 25bp 인하 시그널</li>
+                <li>· MSCI watchlist 등재 성공</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-yellow-400 mb-2 font-semibold">이익 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 메모리 슈퍼사이클 2027 하반기까지 연장</li>
+                <li>· HBM4 NVIDIA Rubin 양산 정상화</li>
+                <li>· 12M Fwd EPS 1,059 → 1,200 상향</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-yellow-400 mb-2 font-semibold">구조개혁 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 6/3 지방선거 여당 우위</li>
+                <li>· 의무공개매수제 입법</li>
+                <li>· 국민연금 국내주식 14.9% → 19.9%</li>
+                <li>· PBR 1.30 → 1.55배 재평가</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-red-500/30 bg-red-500/5">
+              <div class="text-xs font-semibold text-red-300 mb-2">⚠ 무효화 트리거</div>
+              <p class="text-sm text-gray-300">한은 7~8월 깜짝 인상 · 원/달러 1,550 돌파 · 6/3 지방선거 여당 패배 + 입법 좌초 · 상법 헌법재판소 위헌</p>
+            </div>
+            <div class="p-4 rounded-xl border border-green-500/20 bg-green-500/5">
+              <div class="text-xs font-semibold text-green-300 mb-2">📜 역사적 선례</div>
+              <p class="text-sm text-gray-300">닛케이 2012-13 초기 6개월 +65% + TSE PBR 캠페인 1년차 +50%. 단, 일본은 15년에 4.5배 — 한국은 1년에 3배. <strong class="text-yellow-300">속도 압축 = 변동성 압축</strong>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- B -->
+        <div class="detail-content" data-scenario-detail="B">
+          <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl font-black text-blue-300">B</span>
+                <span class="text-2xl font-bold">중립 시나리오 (Base Case)</span>
+                <span class="prob-pill bg-blue-500/15 text-blue-300">확률 40%</span>
+              </div>
+              <p class="text-gray-400">2026 단기 돌파 좌절 → 2027~2028 점진적 도달 → 2028 하반기~2029 안착</p>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">도달 산식</div>
+              <div class="font-mono text-blue-300">EPS 1,100 × PER 9.1배 ≒ 10,010</div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-blue-300 mb-2 font-semibold">거시 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 한은 하반기 25bp 인상 후 2027 인하</li>
+                <li>· 미 FFR 2.75% 수렴</li>
+                <li>· 원/달러 1,300대 정착</li>
+                <li>· MSCI DM 2027 결정 · 2028~29 시행</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-blue-300 mb-2 font-semibold">이익 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 692조 컨센서스 그대로 실현</li>
+                <li>· Fwd PER 7.6 → 9.4배 재평가</li>
+                <li>· 2027 메모리 정점 후 부분 정상화</li>
+                <li>· 2차전지·조선·바이오 보완</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-blue-300 mb-2 font-semibold">구조개혁 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 자율공시 점진</li>
+                <li>· 의무공개매수 50%+1주 통과</li>
+                <li>· PBR 1.30 → 1.45배</li>
+                <li>· 가중평균 2027 ≒ 9,438</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-red-500/30 bg-red-500/5">
+              <div class="text-xs font-semibold text-red-300 mb-2">⚠ 무효화 트리거</div>
+              <p class="text-sm text-gray-300">2026 4Q 이전 반도체 조기 정점 · 한은 인하 사이클 진입 실패(2.5%+ 고착) · 2027 미국 경기침체</p>
+            </div>
+            <div class="p-4 rounded-xl border border-green-500/20 bg-green-500/5">
+              <div class="text-xs font-semibold text-green-300 mb-2">📜 역사적 선례</div>
+              <p class="text-sm text-gray-300">닛케이 2013~2019 정책 정착·이익 회복기 (CAGR 11%) + S&P 장기 9%/년 + 밸류업 추가 멀티플. <strong class="text-blue-300">EPS·PER 동시 우호, 단일 변수 의존도 가장 낮음</strong>.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- C -->
+        <div class="detail-content" data-scenario-detail="C">
+          <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl font-black text-purple-300">C</span>
+                <span class="text-2xl font-bold">보수 시나리오</span>
+                <span class="prob-pill bg-purple-500/15 text-purple-300">확률 25%</span>
+              </div>
+              <p class="text-gray-400">2026 일시 터치 → 메모리 정점 + 정책 정체 → 박스권 → 2029~2030 재돌파</p>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">도달 산식</div>
+              <div class="font-mono text-purple-300">EPS 850 × PER 11.8배 ≒ 10,030</div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-purple-300 mb-2 font-semibold">거시 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 2026~2027 조정 (KOSPI 6,500~7,500)</li>
+                <li>· 반도체 가격 둔화 + 한은 매파</li>
+                <li>· 원화 약세 재진입</li>
+                <li>· 2028~2029 AI 추가 + 한은 인하</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-purple-300 mb-2 font-semibold">이익 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 2027 메모리 정점 (~700조)</li>
+                <li>· 2028~29 EPS 정상화 (~500조)</li>
+                <li>· 2029 사이클 회복</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-purple-300 mb-2 font-semibold">구조개혁 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 지방선거 혼조</li>
+                <li>· 의무공개매수 좌초</li>
+                <li>· PBR 1.30 → 1.25 → 1.45</li>
+                <li>· 정책은 보조 동력으로 약화</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-red-500/30 bg-red-500/5">
+              <div class="text-xs font-semibold text-red-300 mb-2">⚠ 무효화 트리거</div>
+              <p class="text-sm text-gray-300">2026 4Q~2027 1Q에 8,500선 미돌파 → 시나리오 D로 강등 · 한은 인하 진입 실패 → 박스권 장기화</p>
+            </div>
+            <div class="p-4 rounded-xl border border-green-500/20 bg-green-500/5">
+              <div class="text-xs font-semibold text-green-300 mb-2">📜 역사적 선례</div>
+              <p class="text-sm text-gray-300">코스피 자체 3연속 패턴: 2007 → 2008 -22.67% · 2021 → 2022 -25% · 닛케이 2007 (15,000 도달 후 GFC). <strong class="text-purple-300">한국 시장 역사상 가장 흔한 패턴</strong> — 펀더멘털 회복형 도달이라 안착 시 더 견고할 수도.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- D -->
+        <div class="detail-content" data-scenario-detail="D">
+          <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
+            <div>
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-3xl font-black text-red-300">D</span>
+                <span class="text-2xl font-bold">지연/실패 시나리오</span>
+                <span class="prob-pill bg-red-500/15 text-red-300">확률 15%</span>
+              </div>
+              <p class="text-gray-400">2026 단기 시도 → 2027 조정 → 박스권 5~10년 고착. 안착 2032+ 또는 미달.</p>
+            </div>
+            <div class="text-right">
+              <div class="text-xs text-gray-500 uppercase tracking-widest mb-1">박스 회귀 산식</div>
+              <div class="font-mono text-red-300">EPS 700 × PER 8배 ≒ 5,600</div>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-3 gap-4 mb-6">
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-red-300 mb-2 font-semibold">거시 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 잠재성장률 1% 미만</li>
+                <li>· 원/달러 1,500 상회 만성화</li>
+                <li>· MSCI DM 무산</li>
+                <li>· EM 내 비중 축소</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-red-300 mb-2 font-semibold">이익 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 반도체 patent cliff</li>
+                <li>· 중국 메모리 자급 가속 (CXMT·YMTC)</li>
+                <li>· 양사 영업이익 -50% 영구</li>
+              </ul>
+            </div>
+            <div class="p-4 rounded-xl bg-white/3 border border-white/5">
+              <div class="text-xs text-red-300 mb-2 font-semibold">구조개혁 조건</div>
+              <ul class="text-sm text-gray-300 space-y-1">
+                <li>· 상법 헌법소원 인용</li>
+                <li>· 금투세 강행</li>
+                <li>· 정치 충격 재발</li>
+                <li>· PBR 1.30 → 1.10 재할인</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-4">
+            <div class="p-4 rounded-xl border border-green-500/30 bg-green-500/5">
+              <div class="text-xs font-semibold text-green-300 mb-2">✨ 회피 조건 (이 시나리오로 굳어지지 않게)</div>
+              <p class="text-sm text-gray-300">비메모리·바이오·이차전지 두 번째 엔진 · 상법 헌법 합치 + 의무공개매수 입법 · 잠재성장률 2%대 회복</p>
+            </div>
+            <div class="p-4 rounded-xl border border-yellow-500/20 bg-yellow-500/5">
+              <div class="text-xs font-semibold text-yellow-300 mb-2">📜 역사적 선례</div>
+              <p class="text-sm text-gray-300">닛케이 1989 → 2024 (34년 회복). 단 한국은 출발 PER이 정반대(저평가) — 완전 정체보다는 <strong class="text-yellow-300">코스피 1989~2007 (18년 박스권)</strong>형이 가능성 높음.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- PROBABILITY -->
+  <section id="probability" class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">SECTION 02</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-3">확률 분포</h2>
+        <p class="text-gray-400 mb-10 max-w-2xl">단일 점추정 대신 정성 확률 분포로. "터치(touch)"와 "안착(sustained 3개월+)"은 다른 질문이다.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-12">
+        <div class="glass p-7 reveal">
+          <h3 class="font-bold mb-1">시나리오 4종 확률</h3>
+          <p class="text-xs text-gray-500 mb-4">전체 100%</p>
+          <div class="h-72">
+            <canvas id="chart-doughnut"></canvas>
+          </div>
+        </div>
+        <div class="glass p-7 reveal">
+          <h3 class="font-bold mb-1">누적 도달 확률</h3>
+          <p class="text-xs text-gray-500 mb-4">시점별 "터치" vs "안착(3개월+)"</p>
+          <div class="h-72">
+            <canvas id="chart-cumulative"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass p-8 reveal">
+        <h3 class="font-bold mb-1">시나리오별 2027말 핵심 변수 비교</h3>
+        <p class="text-xs text-gray-500 mb-6">레이더 차트 — 안쪽일수록 보수적, 바깥쪽일수록 낙관적</p>
+        <div class="h-96">
+          <canvas id="chart-radar"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- SENSITIVITY -->
+  <section id="sensitivity" class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">SECTION 03</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-3">민감도 시뮬레이션</h2>
+        <p class="text-gray-400 mb-10 max-w-2xl">슬라이더를 움직여 핵심 변수를 변경하면 코스피 10,000 도달 시점이 어떻게 이동하는지 실시간으로 보세요.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-8">
+        <!-- Sliders -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- BoK rate -->
+          <div class="glass p-6 reveal">
+            <div class="flex justify-between items-baseline mb-2">
+              <div>
+                <div class="text-xs text-yellow-400 font-semibold mb-1">한은 기준금리 2027말</div>
+                <div class="text-2xl font-bold num-anim"><span id="v-rate">2.00</span>%</div>
+              </div>
+              <div class="text-xs text-gray-500">단일 변수 영향 ±6~12개월</div>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="s-rate" class="w-full" />
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>1.75%</span><span>2.00%</span><span>2.50%+</span>
+            </div>
+          </div>
+
+          <!-- FX -->
+          <div class="glass p-6 reveal">
+            <div class="flex justify-between items-baseline mb-2">
+              <div>
+                <div class="text-xs text-yellow-400 font-semibold mb-1">원/달러 환율 2027말</div>
+                <div class="text-2xl font-bold num-anim">₩<span id="v-fx">1,300</span></div>
+              </div>
+              <div class="text-xs text-gray-500">단일 변수 영향 ±9~12개월</div>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="s-fx" class="w-full" />
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>1,200</span><span>1,300</span><span>1,500+</span>
+            </div>
+          </div>
+
+          <!-- Earnings -->
+          <div class="glass p-6 reveal">
+            <div class="flex justify-between items-baseline mb-2">
+              <div>
+                <div class="text-xs text-yellow-400 font-semibold mb-1">2026E 순이익 실현 (조원)</div>
+                <div class="text-2xl font-bold num-anim"><span id="v-earn">692</span>조원</div>
+              </div>
+              <div class="text-xs text-gray-500">단일 변수 영향 ±9~15개월</div>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="s-earn" class="w-full" />
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>580조 (-16%)</span><span>692조 컨센</span><span>800조 (+15%)</span>
+            </div>
+          </div>
+
+          <!-- PBR -->
+          <div class="glass p-6 reveal">
+            <div class="flex justify-between items-baseline mb-2">
+              <div>
+                <div class="text-xs text-yellow-400 font-semibold mb-1">2027 PBR (정책 의지)</div>
+                <div class="text-2xl font-bold num-anim"><span id="v-pbr">1.45</span>배</div>
+              </div>
+              <div class="text-xs text-gray-500">단일 변수 영향 <span class="text-red-300 font-bold">±12~18개월 (최대)</span></div>
+            </div>
+            <input type="range" min="0" max="100" value="50" id="s-pbr" class="w-full" />
+            <div class="flex justify-between text-[10px] text-gray-500 font-mono mt-1">
+              <span>1.20</span><span>1.45</span><span>1.65</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Output -->
+        <div class="glass p-7 sticky top-24 self-start reveal">
+          <div class="text-xs text-gray-500 uppercase tracking-widest mb-2">시뮬레이션 결과</div>
+          <div class="text-5xl font-black gradient-text mb-1" id="sim-arrival">2027 ~ 2028</div>
+          <div class="text-sm text-gray-400 mb-6" id="sim-comment">기본 가정 = 시나리오 B (중립, Base case)</div>
+
+          <div class="space-y-4 pt-4 border-t border-white/5">
+            <div>
+              <div class="text-xs text-gray-500 mb-1">시나리오 분류</div>
+              <div class="text-xl font-bold" id="sim-scenario">B 중립</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 mb-1">예상 도달 KOSPI (2027)</div>
+              <div class="text-xl font-bold font-mono" id="sim-kospi">9,438</div>
+            </div>
+            <div>
+              <div class="text-xs text-gray-500 mb-1">조건부 도달 확률</div>
+              <div class="text-xl font-bold" id="sim-prob">55%</div>
+            </div>
+          </div>
+
+          <button id="reset-btn" class="mt-6 w-full py-2.5 rounded-lg border border-white/10 text-sm hover:bg-white/5 transition">초기화</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- TIMELINE -->
+  <section id="timeline" class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">SECTION 04</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-3">트리거 캘린더</h2>
+        <p class="text-gray-400 mb-10 max-w-2xl">5/28 한은 + 6/3 지방선거가 가장 빠르고 가장 중요한 단일 시그널. 이 두 이벤트 전후로 시나리오 분포가 크게 재조정된다.</p>
+      </div>
+
+      <div class="glass p-8 mb-8 reveal">
+        <div class="text-xs text-red-300 font-bold uppercase tracking-widest mb-2">🔴 임박 트리거 (1주~1개월)</div>
+        <div class="grid md:grid-cols-4 gap-6">
+          <div>
+            <div class="timeline-dot urgent"></div>
+            <div class="text-xs text-red-300 font-bold mb-1">D+1 · 2026-05-28</div>
+            <div class="font-semibold mb-1">국민연금 기금위 5차</div>
+            <p class="text-xs text-gray-400 leading-relaxed">국내주식 목표비중 14.9% → 19.9% 상향 시 +0.5~1.0% 즉각 효과</p>
+          </div>
+          <div>
+            <div class="timeline-dot urgent"></div>
+            <div class="text-xs text-red-300 font-bold mb-1">D+1 · 2026-05-28</div>
+            <div class="font-semibold mb-1">한은 금통위</div>
+            <p class="text-xs text-gray-400 leading-relaxed">5/28 동결 컨센, 매파 메시지 강도가 핵심. 매파 시 단기 -3%</p>
+          </div>
+          <div>
+            <div class="timeline-dot urgent"></div>
+            <div class="text-xs text-red-300 font-bold mb-1">D+7 · 2026-06-03</div>
+            <div class="font-semibold mb-1">2026 지방선거</div>
+            <p class="text-xs text-gray-400 leading-relaxed">여당 우위 → A 강화, 패배 → C·D 강화. 가중치 재조정 1순위</p>
+          </div>
+          <div>
+            <div class="timeline-dot"></div>
+            <div class="text-xs text-yellow-400 font-bold mb-1">2026-06</div>
+            <div class="font-semibold mb-1">MSCI 6월 리뷰</div>
+            <p class="text-xs text-gray-400 leading-relaxed">watchlist 등재 여부. 등재 시 +2~5% 즉각. A의 핵심 트리거</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass p-8 mb-8 reveal">
+        <div class="text-xs text-yellow-300 font-bold uppercase tracking-widest mb-4">🟡 단·중기 트리거 (1개월~1년)</div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-yellow-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-gray-500">2026 하반기</div>
+              <div class="text-sm font-semibold">의무공개매수제 입법</div>
+              <div class="text-xs text-gray-400">B vs C 분기점</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-yellow-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-gray-500">2026 9~12월</div>
+              <div class="text-sm font-semibold">금투세 처리 향방</div>
+              <div class="text-xs text-gray-400">시행 시 멀티플 -3~5%p</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-yellow-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-gray-500">2026 4Q</div>
+              <div class="text-sm font-semibold">HBM4 NVIDIA Rubin 양산</div>
+              <div class="text-xs text-gray-400">컨센서스 +20% 상향 vs 둔화</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-yellow-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-gray-500">2026~2027</div>
+              <div class="text-sm font-semibold">상법 개정 헌법재판소 결정</div>
+              <div class="text-xs text-gray-400">위헌 시 A → B 강등</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-red-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-red-300 font-semibold">2027 1H</div>
+              <div class="text-sm font-semibold">메모리 사이클 정점</div>
+              <div class="text-xs text-gray-400">B vs C 결정짓는 최대 분기점</div>
+            </div>
+          </div>
+          <div class="flex gap-3 items-start">
+            <div class="w-2 h-2 rounded-full bg-yellow-300 mt-2 flex-shrink-0"></div>
+            <div>
+              <div class="text-xs text-gray-500">2027</div>
+              <div class="text-sm font-semibold">MSCI DM 편입 결정</div>
+              <div class="text-xs text-gray-400">패시브 $20~40B 분산 유입</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass p-8 reveal">
+        <div class="text-xs text-red-300 font-bold uppercase tracking-widest mb-4">⚫ 꼬리 리스크 (저확률·고임팩트)</div>
+        <div class="grid md:grid-cols-3 gap-3">
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">대만해협·한반도 지정학</div>
+            <div class="text-xs text-gray-400">PER 1~2배 디스카운트 영구화</div>
+          </div>
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">미·중 반도체 분리 가속</div>
+            <div class="text-xs text-gray-400">한국 중계 무역 마진 축소</div>
+          </div>
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">JGB발 글로벌 부채 위기</div>
+            <div class="text-xs text-gray-400">EM 자금 일제 이탈</div>
+          </div>
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">정치 충격 재발</div>
+            <div class="text-xs text-gray-400">지정학 디스카운트 +5~10%p</div>
+          </div>
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">중국 메모리 자급 가속</div>
+            <div class="text-xs text-gray-400">CXMT·YMTC → HBM4 가격 -30%</div>
+          </div>
+          <div class="risk-tile p-4 border border-white/5 rounded-xl">
+            <div class="text-sm font-semibold mb-1">미국 2027 경기침체</div>
+            <div class="text-xs text-gray-400">글로벌 EPS 동반 후퇴</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- EXPERTS -->
+  <section id="experts" class="px-6 py-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="reveal">
+        <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-3">SECTION 05</div>
+        <h2 class="text-4xl md:text-5xl font-black mb-3">4명의 전문가 의견</h2>
+        <p class="text-gray-400 mb-10 max-w-2xl">거시·실적·구조개혁·역사 4개 영역 전문가가 각자의 관점에서 도출한 결론.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="glass p-7 reveal">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-300 font-bold">M</div>
+            <div>
+              <div class="font-bold">거시 전문가</div>
+              <div class="text-xs text-gray-500">macro-analyst</div>
+            </div>
+          </div>
+          <p class="text-sm text-gray-300 leading-relaxed mb-3">단기(2026 내) 10,000 돌파 확률 <strong class="text-blue-300">35%</strong>. 안착은 2027~2028이 가장 건강한 경로 (확률 30%).</p>
+          <div class="text-xs text-gray-500">최대 리스크: 외국인 보유 <strong class="text-red-300">39.6%</strong>로 6년래 최고 (천장 42~43%). 반도체 집중도 <strong class="text-red-300">42.2%</strong>.</div>
+        </div>
+
+        <div class="glass p-7 reveal">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-green-500/15 border border-green-500/30 flex items-center justify-center text-green-300 font-bold">E</div>
+            <div>
+              <div class="font-bold">실적·밸류에이션 전문가</div>
+              <div class="text-xs text-gray-500">earnings-valuation-analyst</div>
+            </div>
+          </div>
+          <p class="text-sm text-gray-300 leading-relaxed mb-3">10,000은 컨센서스의 산출물. <strong class="text-green-300">692조 × Fwd PER 9.4배 = 10,061</strong> 자동 도달.</p>
+          <div class="text-xs text-gray-500">"도달 vs 안착" 분리 — 2027 메모리 정점 후 EPS 정상화(503조) 시 7,500~8,500 박스 후퇴. 안착엔 구조적 PER <strong class="text-green-300">+1배 재평가</strong> 필수.</div>
+        </div>
+
+        <div class="glass p-7 reveal">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-yellow-500/15 border border-yellow-500/30 flex items-center justify-center text-yellow-300 font-bold">S</div>
+            <div>
+              <div class="font-bold">구조개혁·정책 전문가</div>
+              <div class="text-xs text-gray-500">structural-reform-analyst</div>
+            </div>
+          </div>
+          <p class="text-sm text-gray-300 leading-relaxed mb-3">코리아 디스카운트 <strong class="text-yellow-300">30~40%가 이미 해소</strong>. PBR 0.95 → 1.30. 일본 TOPIX 동등화 시 이론 <strong class="text-yellow-300">~16,100</strong>.</p>
+          <div class="text-xs text-gray-500">2026-02 상법 3차 개정 = 게임체인저. <strong class="text-yellow-300">자사주 의무소각 + 이사 충실의무 주주 확대</strong>로 법적 강제력 확보.</div>
+        </div>
+
+        <div class="glass p-7 reveal">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-300 font-bold">H</div>
+            <div>
+              <div class="font-bold">역사적 사례 전문가</div>
+              <div class="text-xs text-gray-500">historical-analogy-analyst</div>
+            </div>
+          </div>
+          <p class="text-sm text-gray-300 leading-relaxed mb-3">현재 코스피 = <strong class="text-purple-300">대만 가권 2025-26 + 닛케이 2012-13 + 코스피 1986-89 혼합형</strong>. YoY +205%는 닷컴 1999(+86%)의 2.4배.</p>
+          <div class="text-xs text-gray-500">한국 3연속 패턴: 1000(89)·2000(07)·3000(21) 모두 직후 <strong class="text-red-300">-20~50% 조정</strong>. 4번째 패턴이 깨질 구조적 이유가 충분한가?</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- FINAL MESSAGE -->
+  <section class="px-6 py-24">
+    <div class="max-w-4xl mx-auto text-center reveal">
+      <div class="text-xs text-yellow-400 uppercase tracking-[0.3em] mb-4">최종 한 마디</div>
+      <h2 class="text-3xl md:text-5xl font-black leading-tight mb-8">
+        코스피 10,000은 더 이상<br/>
+        <span class="gradient-text">"갈 수 있는가"</span>의 문제가 아니다.<br/>
+        <span class="text-gray-300 text-2xl md:text-3xl font-bold">"어떤 모습으로 가서 어떻게 안착할 것인가"</span>의 문제다.
+      </h2>
+      <p class="text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10">
+        2027년 내 도달은 절반 확률, 2028 상반기 안착은 충분히 합리적인 base case. 그러나 한국 시장은 3연속으로 마일스톤 도달 직후 큰 조정을 겪었다 — 이 패턴이 깨지려면 반도체 정점 이후의 EPS 정상화를 밸류업 입법이 멀티플 확장으로 상쇄해야 한다.
+      </p>
+      <div class="inline-flex flex-wrap gap-3 justify-center">
+        <div class="px-6 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+          <div class="text-xs text-gray-400 mb-0.5">가장 빠른 시그널</div>
+          <div class="font-bold text-yellow-300">5/28 한은 결정</div>
+        </div>
+        <div class="px-6 py-3 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
+          <div class="text-xs text-gray-400 mb-0.5">가장 중요한 분기점</div>
+          <div class="font-bold text-yellow-300">6/3 지방선거 결과</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="px-6 py-12 mt-16">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-3 gap-8 mb-8">
+        <div>
+          <div class="font-bold mb-3">KOSPI 10,000 Outlook</div>
+          <p class="text-xs text-gray-500 leading-relaxed">5인 전문가 팀 다층 분석. 본 자료는 정보 제공 목적이며 투자 권유가 아닙니다.</p>
+        </div>
+        <div>
+          <div class="font-bold mb-3 text-sm">주요 데이터 출처</div>
+          <ul class="text-xs text-gray-500 space-y-1">
+            <li>한국거래소(KRX) · 한국은행 ECOS · IMF WEO</li>
+            <li>FOMC SEP · Bloomberg 서베이</li>
+            <li>Seoul Economic Daily · Goldman Sachs · Samsung AM</li>
+            <li>Morgan Stanley · BofA · Harvard CorpGov</li>
+          </ul>
+        </div>
+        <div>
+          <div class="font-bold mb-3 text-sm">분석 체계</div>
+          <ul class="text-xs text-gray-500 space-y-1">
+            <li>macro-analyst · 거시 (금리·환율·수급)</li>
+            <li>earnings-valuation-analyst · EPS × PER 분해</li>
+            <li>structural-reform-analyst · 디스카운트·밸류업</li>
+            <li>historical-analogy-analyst · 닛케이/S&P/대만 비교</li>
+            <li>scenario-synthesizer · 시나리오 종합</li>
+          </ul>
+        </div>
+      </div>
+      <div class="pt-6 border-t border-white/5 flex flex-wrap justify-between items-center text-xs text-gray-500">
+        <span>© 2026 KOSPI Outlook · 분석일 2026-05-27</span>
+        <span class="text-gray-600">기준 지수 KOSPI 8,048 (2026-05-26 종가)</span>
+      </div>
+    </div>
+  </footer>
+</main>
+
+<script>
+// ========== Particle Network Background ==========
+(function() {
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  let mouseX = -1000, mouseY = -1000;
+
+  function resize() {
+    canvas.width = window.innerWidth * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  }
+
+  function init() {
+    resize();
+    const count = Math.min(Math.floor((window.innerWidth * window.innerHeight) / 16000), 120);
+    particles = [];
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        vx: (Math.random() - 0.5) * 0.3,
+        vy: (Math.random() - 0.5) * 0.3,
+        r: Math.random() * 1.8 + 0.4,
+        hue: Math.random() > 0.7 ? 45 : (Math.random() > 0.5 ? 210 : 260),
+      });
+    }
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+    for (let p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > window.innerWidth) p.vx *= -1;
+      if (p.y < 0 || p.y > window.innerHeight) p.vy *= -1;
+
+      // Mouse attraction
+      const dx = mouseX - p.x;
+      const dy = mouseY - p.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 22500) {
+        p.vx += dx * 0.00005;
+        p.vy += dy * 0.00005;
+      }
+      p.vx *= 0.99;
+      p.vy *= 0.99;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${p.hue}, 90%, 70%, 0.55)`;
+      ctx.fill();
+    }
+
+    // Connections
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 < 16000) {
+          const alpha = 0.18 * (1 - d2 / 16000);
+          ctx.strokeStyle = `hsla(45, 90%, 65%, ${alpha})`;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  window.addEventListener('resize', () => init());
+  window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+  window.addEventListener('mouseleave', () => { mouseX = -1000; mouseY = -1000; });
+  init();
+  tick();
+})();
+
+// ========== Hero progress animation ==========
+setTimeout(() => {
+  const p = document.getElementById('hero-progress');
+  p.style.transform = `scaleX(${8048 / 10000})`;
+}, 400);
+
+// ========== Animate counters ==========
+function animateNum(el, target, duration = 1500, prefix = '', suffix = '') {
+  const start = 0;
+  const startTime = performance.now();
+  function step(now) {
+    const t = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const v = Math.floor(start + (target - start) * eased);
+    el.textContent = prefix + v.toLocaleString() + suffix;
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+setTimeout(() => animateNum(document.getElementById('kospi-current'), 8048, 1800), 200);
+
+// ========== Reveal on scroll ==========
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.12 });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ========== Mouse glow on scenario cards ==========
+document.querySelectorAll('.scenario-card').forEach(card => {
+  card.addEventListener('mousemove', (e) => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    card.style.setProperty('--my', `${e.clientY - r.top}px`);
+  });
+});
+
+// ========== Scenario switching ==========
+document.querySelectorAll('.scenario-card').forEach(card => {
+  card.addEventListener('click', () => {
+    const s = card.dataset.scenario;
+    document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    document.querySelectorAll('.detail-content').forEach(d => d.classList.remove('active'));
+    document.querySelector(`[data-scenario-detail="${s}"]`).classList.add('active');
+  });
+});
+
+// ========== Charts (Chart.js) ==========
+Chart.defaults.color = '#9aa3b2';
+Chart.defaults.font.family = "'Pretendard Variable', sans-serif";
+Chart.defaults.font.size = 12;
+
+// Doughnut
+const doughnutCtx = document.getElementById('chart-doughnut').getContext('2d');
+new Chart(doughnutCtx, {
+  type: 'doughnut',
+  data: {
+    labels: ['A 낙관', 'B 중립 (Base)', 'C 보수', 'D 지연/실패'],
+    datasets: [{
+      data: [20, 40, 25, 15],
+      backgroundColor: [
+        'rgba(245, 180, 0, 0.85)',
+        'rgba(96, 165, 250, 0.85)',
+        'rgba(167, 139, 250, 0.85)',
+        'rgba(255, 87, 87, 0.85)',
+      ],
+      borderColor: '#0a0d18',
+      borderWidth: 3,
+      hoverOffset: 16,
+    }],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16, color: '#e8ecf2' } },
+      tooltip: {
+        backgroundColor: 'rgba(5,6,13,0.95)',
+        borderColor: 'rgba(245,180,0,0.5)',
+        borderWidth: 1,
+        padding: 12,
+        callbacks: { label: (c) => `${c.label}: ${c.parsed}%` }
+      }
+    }
+  }
+});
+
+// Cumulative
+const cumCtx = document.getElementById('chart-cumulative').getContext('2d');
+new Chart(cumCtx, {
+  type: 'line',
+  data: {
+    labels: ['2026', '2027', '2028', '2030', '영구 미달'],
+    datasets: [
+      {
+        label: '10,000 터치 확률',
+        data: [30, 55, 70, 80, 95],
+        borderColor: 'rgba(245, 180, 0, 1)',
+        backgroundColor: 'rgba(245, 180, 0, 0.18)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointBackgroundColor: '#f5b400',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+      },
+      {
+        label: '10,000 안착 확률 (3개월+)',
+        data: [3, 15, 40, 70, 85],
+        borderColor: 'rgba(96, 165, 250, 1)',
+        backgroundColor: 'rgba(96, 165, 250, 0.10)',
+        fill: true,
+        tension: 0.35,
+        borderWidth: 2.5,
+        pointBackgroundColor: '#60a5fa',
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        borderDash: [5, 4],
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16 } },
+      tooltip: {
+        backgroundColor: 'rgba(5,6,13,0.95)',
+        borderColor: 'rgba(245,180,0,0.5)',
+        borderWidth: 1,
+        callbacks: { label: (c) => `${c.dataset.label}: ${c.parsed.y}%` }
+      }
+    },
+    scales: {
+      y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// Radar
+const radarCtx = document.getElementById('chart-radar').getContext('2d');
+new Chart(radarCtx, {
+  type: 'radar',
+  data: {
+    labels: ['금리 (인하)', '원/달러 (강세)', 'EPS 성장', 'PBR 재평가', 'MSCI DM', '밸류업 입법', '반도체 연장'],
+    datasets: [
+      { label: 'A 낙관', data: [9, 9, 9, 9, 9, 9, 9], borderColor: '#f5b400', backgroundColor: 'rgba(245,180,0,0.18)', borderWidth: 2 },
+      { label: 'B 중립', data: [6, 7, 7, 6, 7, 6, 7], borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.18)', borderWidth: 2 },
+      { label: 'C 보수', data: [4, 4, 4, 4, 4, 4, 3], borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.18)', borderWidth: 2 },
+      { label: 'D 지연', data: [2, 2, 2, 2, 1, 1, 1], borderColor: '#ff5757', backgroundColor: 'rgba(255,87,87,0.18)', borderWidth: 2 },
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 16 } } },
+    scales: {
+      r: {
+        beginAtZero: true, max: 10,
+        grid: { color: 'rgba(255,255,255,0.08)' },
+        angleLines: { color: 'rgba(255,255,255,0.08)' },
+        pointLabels: { color: '#e8ecf2', font: { size: 11 } },
+        ticks: { display: false }
+      }
+    }
+  }
+});
+
+// ========== Sensitivity simulator ==========
+const sliders = {
+  rate: { el: document.getElementById('s-rate'), out: document.getElementById('v-rate'), map: v => (1.75 + (v/100) * (2.50 - 1.75)).toFixed(2) },
+  fx:   { el: document.getElementById('s-fx'),   out: document.getElementById('v-fx'),   map: v => Math.round(1200 + (v/100) * (1500 - 1200)).toLocaleString() },
+  earn: { el: document.getElementById('s-earn'), out: document.getElementById('v-earn'), map: v => Math.round(580 + (v/100) * (800 - 580)) },
+  pbr:  { el: document.getElementById('s-pbr'),  out: document.getElementById('v-pbr'),  map: v => (1.20 + (v/100) * (1.65 - 1.20)).toFixed(2) },
+};
+
+function recomputeSim() {
+  for (const k in sliders) {
+    const s = sliders[k];
+    s.out.textContent = s.map(+s.el.value);
+  }
+  // Score 0~100: high = favorable for KOSPI
+  // For rate: lower = better (invert)
+  // For fx: lower = better (invert)
+  // For earn: higher = better
+  // For pbr: higher = better
+  const rateScore = 100 - (+sliders.rate.el.value);
+  const fxScore   = 100 - (+sliders.fx.el.value);
+  const earnScore = (+sliders.earn.el.value);
+  const pbrScore  = (+sliders.pbr.el.value) * 1.3; // PBR weighted higher
+  const total = (rateScore * 0.20 + fxScore * 0.22 + earnScore * 0.28 + pbrScore * 0.30);
+
+  let scenarioLabel, arrivalText, comment, kospiVal, prob, color;
+  if (total >= 75) {
+    scenarioLabel = 'A 낙관';
+    arrivalText = '2026 4Q ~ 2027 1Q';
+    comment = '단기 돌파 + 빠른 안착 가능 영역';
+    kospiVal = '11,000 ~ 11,400';
+    prob = '20% (조건 모두 충족 시)';
+    color = '#f5b400';
+  } else if (total >= 55) {
+    scenarioLabel = 'B 중립';
+    arrivalText = '2027 ~ 2028';
+    comment = '점진적 도달 + 2028 하반기 안착';
+    kospiVal = '9,400 ~ 10,200';
+    prob = '40% (Base case)';
+    color = '#60a5fa';
+  } else if (total >= 35) {
+    scenarioLabel = 'C 보수';
+    arrivalText = '2029 ~ 2030';
+    comment = '조정 후 재돌파 경로';
+    kospiVal = '7,500 ~ 8,500 (박스)';
+    prob = '25%';
+    color = '#a78bfa';
+  } else {
+    scenarioLabel = 'D 지연/실패';
+    arrivalText = '2032+ 또는 미달';
+    comment = '잃어버린 10년형 — 정책·산업 동시 실패';
+    kospiVal = '5,600 ~ 7,000 박스';
+    prob = '15%';
+    color = '#ff5757';
+  }
+  const arrivalEl = document.getElementById('sim-arrival');
+  arrivalEl.textContent = arrivalText;
+  arrivalEl.style.background = `linear-gradient(135deg, ${color} 0%, #fff 70%)`;
+  arrivalEl.style.webkitBackgroundClip = 'text';
+  arrivalEl.style.webkitTextFillColor = 'transparent';
+  document.getElementById('sim-comment').textContent = comment;
+  document.getElementById('sim-scenario').textContent = scenarioLabel;
+  document.getElementById('sim-scenario').style.color = color;
+  document.getElementById('sim-kospi').textContent = kospiVal;
+  document.getElementById('sim-prob').textContent = prob;
+}
+
+Object.values(sliders).forEach(s => s.el.addEventListener('input', recomputeSim));
+document.getElementById('reset-btn').addEventListener('click', () => {
+  Object.values(sliders).forEach(s => s.el.value = 50);
+  recomputeSim();
+});
+recomputeSim();
+
+// ========== Ticker tape ==========
+const tickerItems = [
+  { label: 'KOSPI', val: '8,048.42', delta: '+2.55%', cls: 'up' },
+  { label: 'KOSDAQ', val: '985.13', delta: '+1.82%', cls: 'up' },
+  { label: '삼성전자', val: '128,500', delta: '+3.21%', cls: 'up' },
+  { label: 'SK하이닉스', val: '465,000', delta: '+4.07%', cls: 'up' },
+  { label: 'USD/KRW', val: '1,418.50', delta: '-0.62%', cls: 'down' },
+  { label: 'BoK Rate', val: '2.75%', delta: '동결 컨센', cls: 'neutral' },
+  { label: 'Fed Rate', val: '3.50%', delta: 'Sept -25bp 시그널', cls: 'neutral' },
+  { label: '12M Fwd PER', val: '10.4x', delta: 'peak', cls: 'neutral' },
+  { label: 'KOSPI PBR', val: '1.30x', delta: '+37% vs 2024', cls: 'up' },
+  { label: '외국인 비중', val: '39.6%', delta: '6년래 최고', cls: 'up' },
+  { label: '반도체 시총 비중', val: '42.2%', delta: '집중도 리스크', cls: 'neutral' },
+  { label: '2026E 순이익', val: '692조원', delta: '컨센 +48% (Feb 대비)', cls: 'up' },
+  { label: 'YoY 상승률', val: '+205.15%', delta: '역사 최상위', cls: 'up' },
+];
+function buildTicker(elId) {
+  const el = document.getElementById(elId);
+  let html = '';
+  for (let r = 0; r < 2; r++) {
+    for (const it of tickerItems) {
+      html += `<span class="ticker-item"><span class="text-gray-500">${it.label}</span><span class="text-white font-semibold">${it.val}</span><span class="${it.cls}">${it.delta}</span></span>`;
+    }
+  }
+  el.innerHTML = html;
+}
+buildTicker('ticker-1');
+buildTicker('ticker-2');
+
+// ========== Distance counter (KOSPI to 10000) ==========
+const distEl = document.getElementById('distance');
+setTimeout(() => {
+  let v = 0;
+  const target = 24.3;
+  const id = setInterval(() => {
+    v += 0.6;
+    if (v >= target) { v = target; clearInterval(id); }
+    distEl.textContent = v.toFixed(1);
+  }, 30);
+}, 600);
+
+</script>
+</body>
+</html>
