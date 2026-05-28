@@ -456,7 +456,14 @@
       <a href="#timeline" class="nav-link">캘린더</a>
       <a href="#experts" class="nav-link">전문가</a>
     </div>
-    <div class="text-xs text-gray-500 hidden lg:block">분석일 2026-05-27</div>
+    <div class="text-xs text-gray-500 hidden lg:flex items-center gap-3">
+      <span>분석일 2026-05-27</span>
+      <span class="w-px h-3 bg-white/10"></span>
+      <span id="live-status" class="inline-flex items-center gap-1.5 text-gray-500">
+        <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+        데이터 동기화 중…
+      </span>
+    </div>
   </div>
 </nav>
 
@@ -498,13 +505,13 @@
         <div class="glass p-8 reveal">
           <div class="flex items-baseline justify-between mb-2">
             <span class="text-xs text-gray-500 uppercase tracking-widest">현재 KOSPI</span>
-            <span class="text-xs text-green-400">YoY +205.15%</span>
+            <span id="hero-yoy" class="text-xs text-green-400">YoY +205.15%</span>
           </div>
           <div class="flex items-baseline gap-3 mb-1">
             <div class="text-5xl md:text-6xl font-black num-anim" id="kospi-current">8,048</div>
-            <div class="text-sm text-green-400 font-semibold">+2.55%</div>
+            <div id="hero-change" class="text-sm text-green-400 font-semibold">+2.55%</div>
           </div>
-          <div class="text-xs text-gray-500 mb-6">2026-05-26 종가 · 출처: KRX</div>
+          <div id="hero-asof" class="text-xs text-gray-500 mb-6">2026-05-26 종가 · 출처: KRX</div>
 
           <div class="space-y-2 mb-6">
             <div class="flex justify-between text-xs text-gray-400">
@@ -516,7 +523,7 @@
             </div>
             <div class="flex justify-between text-[10px] text-gray-600 font-mono">
               <span>0</span>
-              <span>8,048</span>
+              <span id="hero-progress-label">8,048</span>
               <span>10,000</span>
             </div>
           </div>
@@ -1588,7 +1595,7 @@ document.getElementById('reset-btn').addEventListener('click', () => {
 recomputeSim();
 
 // ========== Ticker tape ==========
-const tickerItems = [
+let tickerItems = [
   { label: 'KOSPI', val: '8,048.42', delta: '+2.55%', cls: 'up' },
   { label: 'KOSDAQ', val: '985.13', delta: '+1.82%', cls: 'up' },
   { label: '삼성전자', val: '128,500', delta: '+3.21%', cls: 'up' },
@@ -1615,18 +1622,122 @@ function buildTicker(elId) {
 }
 buildTicker('ticker-1');
 buildTicker('ticker-2');
+window.__rebuildTickers = () => { buildTicker('ticker-1'); buildTicker('ticker-2'); };
 
 // ========== Distance counter (KOSPI to 10000) ==========
 const distEl = document.getElementById('distance');
-setTimeout(() => {
+let distanceTarget = 24.3;
+function animateDistance() {
   let v = 0;
-  const target = 24.3;
   const id = setInterval(() => {
-    v += 0.6;
-    if (v >= target) { v = target; clearInterval(id); }
+    v += distanceTarget / 40;
+    if (v >= distanceTarget) { v = distanceTarget; clearInterval(id); }
     distEl.textContent = v.toFixed(1);
   }, 30);
-}, 600);
+}
+setTimeout(animateDistance, 600);
+
+// ========== Live KOSPI snapshot (data/kospi.json) ==========
+// GitHub Actions cron이 10분마다 갱신. fetch 실패 시 정적 값 유지.
+(async function loadLive() {
+  try {
+    const res = await fetch('data/kospi.json?ts=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+
+    // 1) Hero card — KOSPI
+    if (d.kospi && typeof d.kospi.price === 'number') {
+      const k = d.kospi;
+      const fmt = (n) => Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fmtInt = (n) => Math.round(n).toLocaleString('ko-KR');
+
+      const kospiEl = document.getElementById('kospi-current');
+      if (kospiEl) kospiEl.textContent = fmtInt(k.price);
+
+      const changeEl = document.getElementById('hero-change');
+      if (changeEl && typeof k.change_pct === 'number') {
+        const up = k.change_pct >= 0;
+        changeEl.textContent = (up ? '+' : '') + k.change_pct.toFixed(2) + '%';
+        changeEl.className = 'text-sm font-semibold ' + (up ? 'text-green-400' : 'text-red-400');
+      }
+
+      const yoyEl = document.getElementById('hero-yoy');
+      if (yoyEl && typeof k.yoy_pct === 'number') {
+        const up = k.yoy_pct >= 0;
+        yoyEl.textContent = 'YoY ' + (up ? '+' : '') + k.yoy_pct.toFixed(2) + '%';
+        yoyEl.className = 'text-xs ' + (up ? 'text-green-400' : 'text-red-400');
+      }
+
+      const asof = document.getElementById('hero-asof');
+      if (asof && k.date) asof.textContent = `${k.date} 종가 · 출처: ${k.source === 'pykrx' ? 'KRX' : 'Yahoo'}`;
+
+      const progLabel = document.getElementById('hero-progress-label');
+      if (progLabel) progLabel.textContent = fmtInt(k.price);
+
+      const prog = document.getElementById('hero-progress');
+      if (prog && typeof k.progress === 'number') prog.style.transform = `scaleX(${k.progress})`;
+
+      if (typeof k.to_target_pct === 'number') {
+        distanceTarget = k.to_target_pct;
+        // re-run animation with live value
+        distEl.textContent = '0.0';
+        animateDistance();
+      }
+    }
+
+    // 2) Ticker tape — KOSPI / KOSDAQ / USD/KRW 갱신
+    function updateTicker(label, val, deltaPct) {
+      const idx = tickerItems.findIndex(it => it.label === label);
+      if (idx < 0) return;
+      const fmt = (n) => Number(n).toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      tickerItems[idx] = {
+        label,
+        val: fmt(val),
+        delta: (deltaPct >= 0 ? '+' : '') + deltaPct.toFixed(2) + '%',
+        cls: deltaPct >= 0 ? 'up' : 'down',
+      };
+    }
+    if (d.kospi && d.kospi.price) updateTicker('KOSPI', d.kospi.price, d.kospi.change_pct || 0);
+    if (d.kosdaq && d.kosdaq.price) updateTicker('KOSDAQ', d.kosdaq.price, d.kosdaq.change_pct || 0);
+    if (d.usdkrw && d.usdkrw.price) updateTicker('USD/KRW', d.usdkrw.price, d.usdkrw.change_pct || 0);
+    if (d.kospi && typeof d.kospi.yoy_pct === 'number') {
+      const idx = tickerItems.findIndex(it => it.label === 'YoY 상승률');
+      if (idx >= 0) {
+        const up = d.kospi.yoy_pct >= 0;
+        tickerItems[idx] = {
+          label: 'YoY 상승률',
+          val: (up ? '+' : '') + d.kospi.yoy_pct.toFixed(2) + '%',
+          delta: 'live',
+          cls: up ? 'up' : 'down',
+        };
+      }
+    }
+    if (window.__rebuildTickers) window.__rebuildTickers();
+
+    // 3) Status pill in nav
+    const status = document.getElementById('live-status');
+    if (status && d.as_of) {
+      const dt = new Date(d.as_of);
+      const hhmm = dt.toLocaleString('ko-KR', {
+        hour: '2-digit', minute: '2-digit',
+        month: '2-digit', day: '2-digit',
+        timeZone: 'Asia/Seoul', hour12: false,
+      });
+      status.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+        <span class="text-green-400 font-semibold">LIVE</span>
+        <span>${hhmm} KST</span>`;
+    }
+  } catch (e) {
+    console.warn('[live] data/kospi.json 미사용 — 정적 값 유지:', e.message);
+    const status = document.getElementById('live-status');
+    if (status) {
+      status.innerHTML = `
+        <span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+        <span>스냅샷 대기</span>`;
+    }
+  }
+})();
 
 </script>
 </body>
