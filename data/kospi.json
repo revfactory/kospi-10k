@@ -1,6 +1,6 @@
 {
-  "as_of": "2026-05-28T16:40:11+09:00",
-  "as_of_kst": "2026-05-28 16:40:11 KST",
+  "as_of": "2026-05-28T17:57:01+09:00",
+  "as_of_kst": "2026-05-28 17:57:01 KST",
   "kospi": {
     "source": "yfinance",
     "price": 8185.29,
@@ -34,9 +34,9 @@
   },
   "usdkrw": {
     "source": "yfinance",
-    "price": 1503.65,
-    "change": -1.79,
-    "change_pct": -0.12,
+    "price": 1502.34,
+    "change": -3.1,
+    "change_pct": -0.21,
     "open": 1500.68,
     "high": 1510.68,
     "low": 1499.97,
