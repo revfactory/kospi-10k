@@ -11,7 +11,6 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/marked-gfm-heading-id@4.0.0/lib/index.umd.min.js"></script>
 <style>
   :root {
     --bg-0: #05060d;
@@ -332,14 +331,10 @@
 </footer>
 
 <script>
-  // Configure marked with GFM + syntax highlight + heading IDs
-  const { gfmHeadingId } = globalThis.markedGfmHeadingId;
-  marked.use(gfmHeadingId());
+  // Configure marked v12 — GFM tables/breaks, heading IDs set by buildToc()
   marked.setOptions({
     gfm: true,
     breaks: false,
-    headerIds: true,
-    mangle: false,
   });
 
   function slugify(text) {
