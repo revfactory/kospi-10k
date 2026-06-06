@@ -1,6 +1,6 @@
 {
-  "as_of": "2026-06-05T17:36:10+09:00",
-  "as_of_kst": "2026-06-05 17:36:10 KST",
+  "as_of": "2026-06-06T10:43:04+09:00",
+  "as_of_kst": "2026-06-06 10:43:04 KST",
   "kospi": {
     "source": "yfinance",
     "price": 8160.59,
@@ -9,7 +9,7 @@
     "open": 8323.2,
     "high": 8382.16,
     "low": 8038.1,
-    "volume": 446373,
+    "volume": 463200,
     "date": "2026-06-05",
     "label": "KOSPI",
     "yoy_base": 2812.05,
@@ -23,25 +23,25 @@
   "kosdaq": {
     "source": "yfinance",
     "price": 1002.44,
-    "change": -23.59,
-    "change_pct": -2.3,
+    "change": -47.29,
+    "change_pct": -4.5,
     "open": 1035.22,
     "high": 1035.22,
     "low": 992.8,
-    "volume": 716501,
+    "volume": 724400,
     "date": "2026-06-05",
     "label": "KOSDAQ"
   },
   "usdkrw": {
     "source": "yfinance",
-    "price": 1538.94,
-    "change": 8.83,
-    "change_pct": 0.58,
+    "price": 1558.84,
+    "change": 25.77,
+    "change_pct": 1.68,
     "open": 1532.95,
-    "high": 1549.32,
+    "high": 1561.48,
     "low": 1531.68,
     "volume": 0,
-    "date": "2026-06-05",
+    "date": "2026-06-06",
     "label": "USD/KRW"
   }
 }
